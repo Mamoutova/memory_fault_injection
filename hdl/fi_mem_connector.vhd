@@ -18,6 +18,11 @@
 -- Revision:  1.1
 -- Modification date: 15 Dec 2013
 -- Notes: minor improvements
+-- Limitation:
+-- Revision:  1.2
+-- Modification date: 11 Jan 2014
+-- Notes: correct work with iw paramter being zero
+-- IF ( (fi_A_i_rg(aw_max+iw-1 DOWNTO aw_max)=i) AND i>0 OR i=0)THEN 
 -- Limitation: 
 --------------------------------------------------------------------------------
 LIBRARY ieee;
@@ -63,7 +68,7 @@ ARCHITECTURE rtl OF fi_mem_connector IS
 
 BEGIN
 
-assert (N = 2**iw) report "N != 2**iw in fi_mem_connector" severity error;
+	assert (N < 2**iw+1) report "N > 2**iw in fi_mem_connector" severity error;
 
 	-- clk, reset
 	clk_o <= clk_i;
@@ -74,7 +79,7 @@ assert (N = 2**iw) report "N != 2**iw in fi_mem_connector" severity error;
 	PROCESS(fi_A_i, fi_i)
 	BEGIN
 		FOR i IN 0 TO N-1 LOOP
-			IF (fi_A_i(aw_max+iw-1 DOWNTO aw_max)=i) AND fi_i='1' THEN
+			IF (((fi_A_i(aw_max+iw-1 DOWNTO aw_max)=i) AND (iw>0)) OR (iw=0)) AND fi_i='1' THEN
 				fi_o(i) <= '1';
 			ELSE
 				fi_o(i) <= '0';
@@ -107,7 +112,7 @@ assert (N = 2**iw) report "N != 2**iw in fi_mem_connector" severity error;
 	BEGIN	
 		fi_data_r_i <= (OTHERS=>'0');
 		FOR i IN 0 TO N-1 LOOP			
-			IF (fi_A_i_rg(aw_max+iw-1 DOWNTO aw_max)=i) THEN
+			IF  ((fi_A_i_rg(aw_max+iw-1 DOWNTO aw_max)=i) AND (iw>0)) OR (iw=0) THEN
 				fi_data_r_i <= fi_data_r_o(i*dw_max + dw_max -1 DOWNTO i*dw_max);
 			END IF;
 		END LOOP;
