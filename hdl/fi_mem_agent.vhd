@@ -6,7 +6,7 @@
 -- Project:   Fault injection
 -- File name: fi_block.vhd
 --------------------------------------------------------------------------------
--- Purpose:  Block of spi slave.
+-- Purpose:  Memory fault injection
 --------------------------------------------------------------------------------
 -- Simulator: Altera Quartus II
 -- Synthesis: Altera Quartus II
