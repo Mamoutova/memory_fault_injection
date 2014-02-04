@@ -37,9 +37,9 @@ static void handle_timer_interrupt(void* context)
 	srand(time_seed());
 	// 1. inject fault
 	// inject in random address
-	int address = rand_range(0, FI_MEM_AGENT_CONTROL_SPAN);
+	int address = rand_range(0, FI_MEM_AGENT_CONTROL_SPAN/4);
 	int mask = 1 << rand_range(0, 32);
-	INJECT_FAULT(FI_MEM_AGENT_CONTROL_BASE + address, mask)
+	INJECT_FAULT(FI_MEM_AGENT_CONTROL_BASE, address*4, mask)
 
 	// share current random address
 	* address_ptr = address;
@@ -176,26 +176,26 @@ void fi_test_regular(fi_agent_control_addr, fi_agent_control_size)
 {
     int address, value_old, mask, i = 0;
 
-//    int* volatile test_memory_fi_inject = (int*)fi_agent_control_addr;
+    int* volatile test_memory_fi_inject = (int*)fi_agent_control_addr;
 
-    alt_putstr("\nFault injection regular test... ");
+    alt_putstr("\nFault injection regular test... \n");
     //running 1
     mask = 1;
     for (i = 0; i< 32; i++)
     {
     	for (address = 0; address<fi_agent_control_size/4; address++)
     	{
-
-    		value_old = *(int*)(fi_agent_control_addr+address);
+    		value_old = test_memory_fi_inject[address];
     		// inject fault
 
-    		INJECT_FAULT(fi_agent_control_addr+address, mask)
+    		test_memory_fi_inject[address] = mask;
+    		int new_value = test_memory_fi_inject[address];
 
     		// check
-    		if (*(int*)(fi_agent_control_addr+address) != (value_old^mask))
+    		if (new_value != (value_old^mask))
     		{
-    			alt_printf("error on address %x through fi read \n", address);
-    			alt_printf("address: %x: initial value %x modified value: %x mask %x\n", address, value_old, *(int *)address, mask);
+    			//alt_printf("error on address %x through fi read \n", address);
+    			alt_printf("address: %x, initial value: %x, modified value: %x, mask: %x, current value: %x\n", address, value_old, new_value, mask, test_memory_fi_inject[address]);
     		}
     	}
     	mask = mask<<1;
@@ -204,19 +204,19 @@ void fi_test_regular(fi_agent_control_addr, fi_agent_control_size)
     mask = ~1;
     for (i = 0; i< 32; i++)
     {
-    	for (address = fi_agent_control_addr; address<fi_agent_control_addr+fi_agent_control_size/4; address++)
+    	for (address = 0; address<fi_agent_control_size/4; address++)
     	{
-
-    		value_old = *(int*)(address);
+    		value_old = test_memory_fi_inject[address];
     		// inject fault
 
-    		INJECT_FAULT(address, mask)
-
+    		test_memory_fi_inject[address] = mask;
+    		INJECT_FAULT(fi_agent_control_addr,address*4, mask)
+    		alt_printf("address: %x: initial value %x modified value: %x mask %x\n", address, value_old, test_memory_fi_inject[address], mask);
     		// check
-    		if (*(int*)(address) != (value_old^mask))
+    		if (test_memory_fi_inject[address] != (value_old^mask))
     		{
     			alt_printf("error on address %x through fi read \n", address);
-    			alt_printf("address: %x: initial value %x modified value: %x mask %x\n", address, value_old, *(int *)address, mask);
+    			alt_printf("address: %x: initial value %x modified value: %x mask %x\n", address, value_old, test_memory_fi_inject[address], mask);
     		}
     	}
     	mask = ~((~mask)<<1);

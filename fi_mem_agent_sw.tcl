@@ -39,6 +39,5 @@ add_sw_property include_source HAL/inc/fi.h
 
 # This driver supports HAL & UCOSII BSP (OS) types
 add_sw_property supported_bsp_type HAL
-#add_sw_property supported_bsp_type UCOSII
 
 # End of file

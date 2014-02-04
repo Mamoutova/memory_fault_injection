@@ -11,7 +11,8 @@
 #include "sys/alt_irq.h"
 #include "altera_avalon_timer_regs.h"
 
-
+#define FI_MEM_AGENT_CONTROL_SPAN FI_MEM_CONNECTOR_SPAN
+#define FI_MEM_AGENT_CONTROL_BASE FI_MEM_CONNECTOR_BASE
 
 extern volatile int fi_address;
 void fi_init(void);
