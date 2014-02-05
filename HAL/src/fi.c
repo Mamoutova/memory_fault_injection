@@ -194,7 +194,7 @@ void fi_test_regular(fi_agent_control_addr, fi_agent_control_size)
     		// check
     		if (new_value != (value_old^mask))
     		{
-    			//alt_printf("error on address %x through fi read \n", address);
+    			alt_printf("error on address %x through fi read \n", address);
     			alt_printf("address: %x, initial value: %x, modified value: %x, mask: %x, current value: %x\n", address, value_old, new_value, mask, test_memory_fi_inject[address]);
     		}
     	}
@@ -210,8 +210,7 @@ void fi_test_regular(fi_agent_control_addr, fi_agent_control_size)
     		// inject fault
 
     		test_memory_fi_inject[address] = mask;
-    		INJECT_FAULT(fi_agent_control_addr,address*4, mask)
-    		alt_printf("address: %x: initial value %x modified value: %x mask %x\n", address, value_old, test_memory_fi_inject[address], mask);
+
     		// check
     		if (test_memory_fi_inject[address] != (value_old^mask))
     		{

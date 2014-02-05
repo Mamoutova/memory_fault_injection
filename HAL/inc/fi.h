@@ -21,7 +21,7 @@ static void handle_timer_interrupt(void* context);
 // Fault injection macro INJECT_FAULT
 // where - an address in fault injection control space (int)
 // what - mask to rule the injection: mask bit value = 1 - invert target bit value (int)
-#define INJECT_FAULT(where, what) *(volatile int *)(where) = (what);
+#define INJECT_FAULT(base, offset, what) *(volatile int *)(base + offset) = (what);
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Function name: 	fi_test_extended
