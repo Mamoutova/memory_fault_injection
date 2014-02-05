@@ -40,8 +40,6 @@ ENTITY fi_mem_connector IS
 	PORT
 	( 
 		-- Combined signals of fault injection command - from the processor
-		clk_i			: IN STD_LOGIC;
-		rst_i			: IN STD_LOGIC;
 		fi_i				: IN 		STD_LOGIC;		-- chipselect, active high
 		fi_wr_i   		: IN 		STD_LOGIC;		-- write, active high
 		fi_A_i 			: IN 		STD_LOGIC_VECTOR(aw_max+iw-1 DOWNTO 0);	-- address
@@ -50,8 +48,6 @@ ENTITY fi_mem_connector IS
 		fi_ack_i 		: OUT		STD_LOGIC;		-- waitrequest_n, active low
 		
 		-- Array of signals of fault injection command - to array fi_mem_agent
-		clk_o			: OUT STD_LOGIC;
-		rst_o			: OUT STD_LOGIC;
 		fi_o				: OUT 	STD_LOGIC_VECTOR(N-1 DOWNTO 0);		-- chipselect
 		fi_wr_o   		: OUT 	STD_LOGIC;										-- write
 		fi_A_o 			: OUT 	STD_LOGIC_VECTOR(aw_max-1 DOWNTO 0);		-- address
@@ -69,10 +65,6 @@ ARCHITECTURE rtl OF fi_mem_connector IS
 BEGIN
 
 	assert (N < 2**iw+1) report "N > 2**iw in fi_mem_connector" severity error;
-
-	-- clk, reset
-	clk_o <= clk_i;
-	rst_o <= rst_i;
 
 	-- chipselect
 	-- select fi_o, addressed by iw msb bits of fi_A_i
