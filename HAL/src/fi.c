@@ -4,65 +4,26 @@
 #include <time.h>
 #include "system.h"
 
-volatile int fi_address;
-
-unsigned int time_seed()
-{
-    time_t now = time(0);
-    unsigned char *p = (unsigned char*)&now;
-    unsigned int seed = 0;
-    int i;
-
-    for (i = 0; i < sizeof now; i++)
-        seed = seed * (UCHAR_MAX + 2U) + p[i];
-
-    return seed;
-}
-
-int rand_range(int low, int high)
-{
-    const int range = high - low + 1;
-    int number;
-    do
-    {
-        number = rand();
-    }
-    while (number >= (RAND_MAX / range) * range);
-    return number % range + low;
-}
+volatile struct fi_point_type fi_value;
 
 static void handle_timer_interrupt(void* context)
 {
-	volatile int* address_ptr = (volatile int*) context;
-	srand(time_seed());
-	// 1. inject fault
-	// inject in random address
-	int address = rand_range(0, FI_MEM_AGENT_CONTROL_SPAN/4);
-	int mask = 1 << rand_range(0, 32);
-	INJECT_FAULT(FI_MEM_AGENT_CONTROL_BASE, address*4, mask)
+	volatile struct fi_point_type* fi_point = (volatile int*) context;
 
-	// share current random address
-	* address_ptr = address;
+	*((int*)(fi_point->address)) = fi_point->mask;
+	printf("*");
 
-	// 2. set next random time
-	/*
-	IOWR_ALTERA_AVALON_TIMER_PERIOD0(TIMER, random);
-	IOWR_ALTERA_AVALON_TIMER_PERIOD1(TIMER, random);
-	IOWR_ALTERA_AVALON_TIMER_PERIOD2(TIMER, random);
-	IOWR_ALTERA_AVALON_TIMER_PERIOD3(TIMER, random);
-*/
-	// 3. handle irq
-	IOWR_ALTERA_AVALON_TIMER_STATUS(TIMER_BASE, 0);
-    IOWR_ALTERA_AVALON_TIMER_CONTROL(TIMER_BASE, ALTERA_AVALON_TIMER_CONTROL_ITO_MSK | ALTERA_AVALON_TIMER_CONTROL_START_MSK);
+	//handle irq
+	IOWR_ALTERA_AVALON_TIMER_STATUS(FI_TIMER_BASE, 0);
 }
 
-void fi_init(void)
+void fi_irq_init(void)
 {
 	// TIMER IRQ init
-    void* fi_address_ptr = (void*) &fi_address;
-    alt_ic_isr_register(TIMER_IRQ_INTERRUPT_CONTROLLER_ID, TIMER_IRQ,
-    		handle_timer_interrupt, fi_address_ptr, 0x0);
-    IOWR_ALTERA_AVALON_TIMER_CONTROL(TIMER_BASE, ALTERA_AVALON_TIMER_CONTROL_ITO_MSK | ALTERA_AVALON_TIMER_CONTROL_START_MSK);
+    void* fi_value_ptr = (void*) &fi_value;
+    IOWR_ALTERA_AVALON_TIMER_CONTROL(FI_TIMER_BASE, 0);
+    alt_ic_isr_register(FI_TIMER_IRQ_INTERRUPT_CONTROLLER_ID, FI_TIMER_IRQ,
+    		handle_timer_interrupt, fi_value_ptr, 0x0);
 }
 
 int fi_test_extended(test_memory_size, memory_addr, fi_agent_control_addr, fi_agent_mem_addr, fi_agent_mem_size)

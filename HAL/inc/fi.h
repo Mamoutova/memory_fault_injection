@@ -11,11 +11,17 @@
 #include "sys/alt_irq.h"
 #include "altera_avalon_timer_regs.h"
 
-#define FI_MEM_AGENT_CONTROL_SPAN FI_MEM_CONNECTOR_SPAN
-#define FI_MEM_AGENT_CONTROL_BASE FI_MEM_CONNECTOR_BASE
+#define FI_MEM_AGENT_CONTROL_SPAN FI_CONNECTOR_SPAN
+#define FI_MEM_AGENT_CONTROL_BASE FI_CONNECTOR_BASE
 
-extern volatile int fi_address;
-void fi_init(void);
+extern volatile struct fi_point_type fi_value;
+
+struct fi_point_type {
+	unsigned int address;
+	unsigned int mask;
+};
+
+void fi_irq_init(void);
 static void handle_timer_interrupt(void* context);
 
 // Fault injection macro INJECT_FAULT
