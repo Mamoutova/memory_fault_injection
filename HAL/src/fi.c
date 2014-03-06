@@ -1,18 +1,27 @@
 #include "fi.h"
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <time.h>
 #include "system.h"
+
+//#define DEBUG_MSG
 
 volatile struct fi_point_type fi_value;
 
 static void handle_timer_interrupt(void* context)
 {
+	// get fault injection parameters - address and mask
 	volatile struct fi_point_type* fi_point = (volatile int*) context;
-
-	*((int*)(fi_point->address)) = fi_point->mask;
-	printf("*");
-
+	// inject fault
+#ifdef DEBUG_MSG
+	int was = *((int*)((fi_point->address) | 0x80000000));
+#endif
+	*((int*)((fi_point->address) | 0x80000000)) = fi_point->mask;		// cache bypass
+#ifdef DEBUG_MSG
+	int now = *((int*)((fi_point->address) | 0x80000000));
+	printf("\n\tfi adr=0x%x was=0x%x now=0x%x mask=0x%x\n",fi_point->address,was,now,fi_point->mask);
+#endif
 	//handle irq
 	IOWR_ALTERA_AVALON_TIMER_STATUS(FI_TIMER_BASE, 0);
 }
@@ -32,7 +41,7 @@ int fi_test_extended(test_memory_size, memory_addr, fi_agent_control_addr, fi_ag
 
     int* volatile test_memory_own = (int*)memory_addr;
     int* volatile test_memory_fi_direct = (int*)fi_agent_mem_addr;
-    int* volatile test_memory_fi_inject = (int*)fi_agent_control_addr;
+    int* volatile test_memory_fi_inject = (int*)(fi_agent_control_addr | 0x80000000);   // cache bypass
 
     alt_putstr("\nFault injection extended test... ");
 
@@ -137,7 +146,7 @@ void fi_test_regular(fi_agent_control_addr, fi_agent_control_size)
 {
     int address, value_old, mask, i = 0;
 
-    int* volatile test_memory_fi_inject = (int*)fi_agent_control_addr;
+    int* volatile test_memory_fi_inject = (int*)(fi_agent_control_addr | 0x80000000);		// cache bypass
 
     alt_putstr("\nFault injection regular test... \n");
     //running 1
@@ -150,9 +159,12 @@ void fi_test_regular(fi_agent_control_addr, fi_agent_control_size)
     		// inject fault
 
     		test_memory_fi_inject[address] = mask;
-    		int new_value = test_memory_fi_inject[address];
 
     		// check
+    		int new_value = test_memory_fi_inject[address];
+#ifdef DEBUG_MSG
+    		alt_printf("address: %x, initial value: %x, modified value: %x, mask: %x, current value: %x\n", &(test_memory_fi_inject[address]), value_old, new_value, mask, test_memory_fi_inject[address]);
+#endif
     		if (new_value != (value_old^mask))
     		{
     			alt_printf("error on address %x through fi read \n", address);
@@ -173,10 +185,14 @@ void fi_test_regular(fi_agent_control_addr, fi_agent_control_size)
     		test_memory_fi_inject[address] = mask;
 
     		// check
-    		if (test_memory_fi_inject[address] != (value_old^mask))
+    		int new_value = test_memory_fi_inject[address];
+#ifdef DEBUG_MSG
+    		alt_printf("address: %x, initial value: %x, modified value: %x, mask: %x, current value: %x\n", address, value_old, new_value, mask, test_memory_fi_inject[address]);
+#endif
+    		if (new_value != (value_old^mask))
     		{
     			alt_printf("error on address %x through fi read \n", address);
-    			alt_printf("address: %x: initial value %x modified value: %x mask %x\n", address, value_old, test_memory_fi_inject[address], mask);
+    			alt_printf("address: %x, initial value: %x, modified value: %x, mask: %x, current value: %x\n", address, value_old, new_value, mask, test_memory_fi_inject[address]);
     		}
     	}
     	mask = ~((~mask)<<1);
