@@ -22,7 +22,8 @@ struct fi_point_type {
 };
 
 void fi_irq_init(void);
-static void handle_timer_interrupt(void* context);
+static void handle_fi_timer_interrupt(void* context);
+static void handle_wd_timer_interrupt(void* context);
 
 // Fault injection macro INJECT_FAULT
 // where - an address in fault injection control space (int)

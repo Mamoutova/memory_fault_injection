@@ -4,12 +4,17 @@
 #include <stdio.h>
 #include <time.h>
 #include "system.h"
+#include <sys/alt_irq.h>
+
+#define AR_HOST_WD_hi 4
+#define AR_HOST_WD_lo 0x1100
 
 //#define DEBUG_MSG
 
 volatile struct fi_point_type fi_value;
+int experiment_status;
 
-static void handle_timer_interrupt(void* context)
+static void handle_fi_timer_interrupt(void* context)
 {
 	// get fault injection parameters - address and mask
 	volatile struct fi_point_type* fi_point = (volatile int*) context;
@@ -17,7 +22,7 @@ static void handle_timer_interrupt(void* context)
 #ifdef DEBUG_MSG
 	int was = *((int*)((fi_point->address) | 0x80000000));
 #endif
-	*((int*)((fi_point->address) | 0x80000000)) = fi_point->mask;		// cache bypass
+	*((int*)((fi_point->address) | 0x80000000)) = fi_point->mask;		// nios cache bypass
 #ifdef DEBUG_MSG
 	int now = *((int*)((fi_point->address) | 0x80000000));
 	printf("\n\tfi adr=0x%x was=0x%x now=0x%x mask=0x%x\n",fi_point->address,was,now,fi_point->mask);
@@ -26,15 +31,49 @@ static void handle_timer_interrupt(void* context)
 	IOWR_ALTERA_AVALON_TIMER_STATUS(FI_TIMER_BASE, 0);
 }
 
+// watch dog timer interrupt
+// a preemptive context switch implementation (domain crossing)
+// tick ISR should return to the host task - effectively interrupting one
+// task and returning to another task, triggered by the timer interrupt
+static void handle_wd_timer_interrupt(void* context)
+{
+	//handle irq
+	IOWR_ALTERA_AVALON_TIMER_STATUS(CUSTOM_WD_TIMER_BASE, 0);
+
+
+  	  // enable interrupts and jump
+	  alt_irq_context status;
+
+	  NIOS2_READ_STATUS (status);
+
+	  status &= ~NIOS2_STATUS_PIE_MSK;
+	  status |= (NIOS2_STATUS_PIE_MSK);
+
+	  asm volatile("movhi at,%0"
+			  : //no outputs
+			  :"i"(AR_HOST_WD_hi)
+			  :"memory");
+	  asm volatile("ori at,at,%0"
+			  : //no outputs
+			  :"i"(AR_HOST_WD_lo)
+			  :"memory");
+
+	  asm volatile("jmp at":::"memory");
+}
+
 void fi_irq_init(void)
 {
-	// TIMER IRQ init
+	// FI_TIMER IRQ init
     void* fi_value_ptr = (void*) &fi_value;
     IOWR_ALTERA_AVALON_TIMER_CONTROL(FI_TIMER_BASE, 0);
     alt_ic_isr_register(FI_TIMER_IRQ_INTERRUPT_CONTROLLER_ID, FI_TIMER_IRQ,
-    		handle_timer_interrupt, fi_value_ptr, 0x0);
+    		handle_fi_timer_interrupt, fi_value_ptr, 0x0);
+    // CUSTOM_WD_TIMER IRQ init
+    void* experiment_status_ptr = (void*) &experiment_status;
+    IOWR_ALTERA_AVALON_TIMER_CONTROL(CUSTOM_WD_TIMER_BASE, 0);
+    alt_ic_isr_register(CUSTOM_WD_TIMER_IRQ_INTERRUPT_CONTROLLER_ID, CUSTOM_WD_TIMER_IRQ,
+    		handle_wd_timer_interrupt, experiment_status_ptr, 0x0);
 }
-
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // Function name: 	fi_test_extended
