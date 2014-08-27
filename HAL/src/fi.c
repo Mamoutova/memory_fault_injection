@@ -7,7 +7,7 @@
 #include <sys/alt_irq.h>
 
 #define AR_HOST_WD_hi 4
-#define AR_HOST_WD_lo 0x1100
+#define AR_HOST_WD_lo 0x0f94
 
 //#define DEBUG_MSG
 
@@ -37,17 +37,18 @@ static void handle_fi_timer_interrupt(void* context)
 // task and returning to another task, triggered by the timer interrupt
 static void handle_wd_timer_interrupt(void* context)
 {
+	// stop fi timer
+	IOWR_ALTERA_AVALON_TIMER_CONTROL(FI_TIMER_BASE, ALTERA_AVALON_TIMER_CONTROL_STOP_MSK);
+
 	//handle irq
 	IOWR_ALTERA_AVALON_TIMER_STATUS(CUSTOM_WD_TIMER_BASE, 0);
-
 
   	  // enable interrupts and jump
 	  alt_irq_context status;
 
 	  NIOS2_READ_STATUS (status);
-
-	  status &= ~NIOS2_STATUS_PIE_MSK;
-	  status |= (NIOS2_STATUS_PIE_MSK);
+	  status |= NIOS2_STATUS_PIE_MSK;
+	  NIOS2_WRITE_STATUS(status);
 
 	  asm volatile("movhi at,%0"
 			  : //no outputs
@@ -57,7 +58,6 @@ static void handle_wd_timer_interrupt(void* context)
 			  : //no outputs
 			  :"i"(AR_HOST_WD_lo)
 			  :"memory");
-
 	  asm volatile("jmp at":::"memory");
 }
 
